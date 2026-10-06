@@ -1,34 +1,70 @@
-name: Test Product CI
+name: Test Product CI Prod
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
 
     services:
-      mongodb:
+      mongo:
         image: mongo:7
         ports:
           - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 20s
+
+    env:
+      MONGO_URI: mongodb://localhost:27017/productdb_test
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run tests
+      - name: Run CRUD tests
         run: npm test
-        env:
-          MONGO_URI: mongodb://127.0.0.1:27017/productdb_test
 
       - name: Build Docker image
         run: docker build -t product-api:ci .
+
+      - name: Healthcheck container với MongoDB
+        run: |
+          docker run -d --name api-ci --network host \
+            -e PORT=3000 \
+            -e MONGO_URI=mongodb://localhost:27017/productdb_ci \
+            product-api:ci
+
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:3000/health; then
+              echo "API healthy"
+              exit 0
+            fi
+            echo "Chờ API... ($i/20)"
+            sleep 3
+          done
+
+          echo "API không healthy"
+          docker logs api-ci
+          exit 1
+
+      - name: Dọn dẹp
+        if: always()
+        run: docker rm -f api-ci || true
