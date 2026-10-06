@@ -7,7 +7,10 @@ app.use(express.json());
 
 app.get('/health', (req, res) => {
     const ok = mongoose.connection.readyState === 1;
-    res.status(ok ? 200 : 503).json({ status: ok ? 'ok' : 'db not connected' });
+    res.status(ok ? 200 : 503).json({
+        status: ok ? 'ok' : 'db not connected',
+        version: 'v2'
+    });
 });
 
 app.use('/api/products', productRoutes);
