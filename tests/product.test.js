@@ -3,22 +3,36 @@ const request = require('supertest');
 const app = require('../app');
 const Product = require('../models/Product');
 
+const TEST_URI =
+    process.env.TEST_MONGO_URI ||
+    process.env.MONGO_URI ||
+    'mongodb://127.0.0.1:27017/productdb_test';
+
 beforeAll(async () => {
-    const uri = process.env.MONGO_URI || '';
-    if (!uri.includes('_test')) {
-        throw new Error('MONGO_URI phai tro toi DB co hau to _test, hien la: "' + uri + '"');
+    // Chỉ cho phép chạy trên database kiểm thử
+    const dbName = new URL(TEST_URI).pathname.slice(1);
+
+    if (!dbName.endsWith('_test')) {
+        throw new Error(
+            'Database kiem thu phai co hau to _test'
+        );
     }
-    await mongoose.connect(uri, {
+
+    await mongoose.connect(TEST_URI, {
         serverSelectionTimeoutMS: 5000,
         appName: 'product-api-test',
     });
+
     await Product.init();
     await Product.deleteMany({});
 }, 30000);
 
 afterAll(async () => {
-    await Product.deleteMany({});
-    await mongoose.connection.close();
+    if (mongoose.connection.readyState === 1) {
+        await Product.deleteMany({});
+    }
+
+    await mongoose.disconnect();
 }, 30000);
 
 describe('Product CRUD', () => {
@@ -65,6 +79,11 @@ describe('Product CRUD', () => {
 
     test('GET sau khi xóa trả 404', async () => {
         const res = await request(app).get('/api/products/1');
+        expect(res.statusCode).toBe(404);
+    });
+
+    test('GET sản phẩm không tồn tại trả 404', async () => {
+        const res = await request(app).get('/api/products/999');
         expect(res.statusCode).toBe(404);
     });
 });
