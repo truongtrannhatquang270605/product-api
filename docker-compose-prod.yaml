@@ -1,7 +1,7 @@
 services:
   mongodb:
     image: mongo:7
-    container_name: nammongodb-prod
+    container_name: nammongodb
     volumes:
       - mongo_prod_data:/data/db
     restart: unless-stopped
@@ -42,7 +42,7 @@ services:
 
   watchtower:
     image: nickfedor/watchtower:latest
-    container_name: watchtower-prod
+    container_name: watchtower
 
     restart: unless-stopped
 
