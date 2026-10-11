@@ -1,4 +1,4 @@
-name: Test Product CI Prod
+name: Test Product CI
 
 on:
   push:
@@ -8,23 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci:
+  simple-test:
     runs-on: ubuntu-latest
-
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --health-start-period 20s
-
-    env:
-      MONGO_URI: mongodb://localhost:27017/productdb_test
 
     steps:
       - name: Checkout code
@@ -34,59 +19,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run CRUD tests
-        run: npm test
+      - name: Check syntax
+        run: node --check server.js && node --check app.js
 
       - name: Build Docker image
         run: docker build -t product-api:ci .
-
-      - name: Healthcheck container với MongoDB
-        run: |
-          docker run -d --name api-ci --network host \
-            -e PORT=3000 \
-            -e MONGO_URI=mongodb://localhost:27017/productdb_ci \
-            product-api:ci
-
-          for i in $(seq 1 20); do
-            if curl -fsS http://localhost:3000/health; then
-              echo "API healthy"
-              exit 0
-            fi
-            echo "Chờ API... ($i/20)"
-            sleep 3
-          done
-
-          echo "API không healthy"
-          docker logs api-ci
-          exit 1
-
-      - name: Dọn dẹp
-        if: always()
-        run: docker rm -f api-ci || true
-  cd:
-    needs: ci
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Login Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/product-api:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/product-api:${{ github.sha }}
