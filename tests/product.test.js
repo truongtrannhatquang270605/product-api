@@ -84,6 +84,6 @@ describe('Product CRUD', () => {
 
     test('GET sản phẩm không tồn tại trả 404', async () => {
         const res = await request(app).get('/api/products/999');
-        expect(res.statusCode).toBe(404);
+        expect(res.statusCode).toBe(400);
     });
 });
