@@ -66,6 +66,12 @@ describe('Product CRUD', () => {
         expect(res.body.pid).toBe(1);
     });
 
+    test('PUT cập nhật giá', async () => {
+        const res = await request(app).put('/api/products/1').send({ price: 1400 });
+        expect(res.statusCode).toBe(200);
+        expect(res.body.price).toBe(1400);
+    });
+
     test('DELETE xóa sản phẩm', async () => {
         const res = await request(app).delete('/api/products/1');
         expect(res.statusCode).toBe(200);
@@ -75,11 +81,4 @@ describe('Product CRUD', () => {
         const res = await request(app).get('/api/products/1');
         expect(res.statusCode).toBe(404);
     });
-
-    test('PUT cập nhật giá', async () => {
-        const res = await request(app).put('/api/products/1').send({ price: 1300 });
-        expect(res.statusCode).toBe(200);
-        expect(res.body.price).toBe(1300);
-    });
-
 });
