@@ -67,9 +67,9 @@ describe('Product CRUD', () => {
     });
 
     test('PUT cập nhật giá', async () => {
-        const res = await request(app).put('/api/products/1').send({ price: 1400 });
+        const res = await request(app).put('/api/products/1').send({ price: 1300 });
         expect(res.statusCode).toBe(200);
-        expect(res.body.price).toBe(1400);
+        expect(res.body.price).toBe(1300);
     });
 
     test('DELETE xóa sản phẩm', async () => {
